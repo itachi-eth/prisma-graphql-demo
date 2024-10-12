@@ -39,26 +39,39 @@ export class OrderRepository {
     productId: number,
     quantity: number,
   ): Promise<Order> {
-    return prisma.$transaction(async (prisma) => {
-      // 更新库存
-      await prisma.product.update({
-        where: { id: productId },
-        data: { inventory: { decrement: quantity } },
-      });
-
-      // 创建订单
-      return prisma.order.create({
-        data: {
-          userId,
-          productId,
-          quantity,
-        },
-        include: {
-          user: true,
-          product: true,
-        },
-      });
+    // 检查产品是否存在并且库存充足
+    const product = await prisma.product.findUnique({
+      where: { id: productId },
     });
+
+    if (!product) {
+      throw new Error('Product not found');
+    }
+
+    if (product.inventory < quantity) {
+      throw new Error('Insufficient inventory');
+    }
+
+    // 更新库存
+    await prisma.product.update({
+      where: { id: productId },
+      data: { inventory: { decrement: quantity } },
+    });
+
+    // 创建订单
+    const newOrder = await prisma.order.create({
+      data: {
+        userId,
+        productId,
+        quantity,
+      },
+      include: {
+        user: true,
+        product: true,
+      },
+    });
+
+    return newOrder;
   }
 
   // 删除订单

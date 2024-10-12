@@ -14,11 +14,6 @@ export const createOrder = async (
   productId: number,
   quantity: number,
 ): Promise<Order> => {
-  const product = await orderRepository.getProductById(productId);
-  if (!product || product.inventory < quantity) {
-    throw new Error('Insufficient inventory');
-  }
-
   return orderRepository.createOrderWithInventoryUpdate(
     userId,
     productId,
